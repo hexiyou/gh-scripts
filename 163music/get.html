@@ -1,0 +1,80 @@
+<div class="highlight"><pre><code class="language-python3"><span class="c">#encoding=utf8</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">from</span> <span class="nn">bs4</span> <span class="k">import</span> <span class="n">BeautifulSoup</span>
+<span class="kn">import</span> <span class="nn">re</span><span class="o">,</span><span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">os</span><span class="o">,</span><span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">base64</span> 
+<span class="kn">from</span> <span class="nn">Crypto.Cipher</span> <span class="k">import</span> <span class="n">AES</span>
+<span class="kn">from</span> <span class="nn">pprint</span> <span class="k">import</span> <span class="n">pprint</span> 
+
+<span class="n">Default_Header</span> <span class="o">=</span> <span class="p">{</span>
+                  <span class="s">'Referer'</span><span class="p">:</span><span class="s">'http://music.163.com/'</span><span class="p">,</span>
+                  <span class="s">'Host'</span><span class="p">:</span><span class="s">'music.163.com'</span><span class="p">,</span>
+                  <span class="s">'User-Agent'</span><span class="p">:</span> <span class="s">'Mozilla/5.0 (X11; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0 Iceweasel/38.3.0'</span><span class="p">,</span>
+                  <span class="s">'Accept'</span><span class="p">:</span><span class="s">'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'</span><span class="p">,</span>
+                  <span class="s">'Accept-Encoding'</span><span class="p">:</span><span class="s">'gzip, deflate'</span>
+                <span class="p">}</span>
+                
+<span class="n">BASE_URL</span> <span class="o">=</span> <span class="s">'http://music.163.com'</span>
+
+<span class="n">_session</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">session</span><span class="p">()</span>
+<span class="n">_session</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">Default_Header</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">getPage</span><span class="p">(</span><span class="n">pageIndex</span><span class="p">):</span>
+    <span class="n">pageUrl</span> <span class="o">=</span> <span class="s">'http://music.163.com/discover/playlist/?order=hot&amp;cat=È«²¿&amp;limit=35&amp;offset='</span><span class="o">+</span><span class="n">pageIndex</span>
+    <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">_session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pageUrl</span><span class="p">)</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+    <span class="n">songList</span> <span class="o">=</span> <span class="n">soup</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s">'a'</span><span class="p">,</span><span class="n">attrs</span> <span class="o">=</span> <span class="p">{</span><span class="s">'class'</span><span class="p">:</span><span class="s">'tit f-thide s-fc0'</span><span class="p">})</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">songList</span><span class="p">:</span>
+        <span class="nb">print</span> <span class="n">i</span><span class="p">[</span><span class="s">'href'</span><span class="p">]</span>
+        <span class="n">getPlayList</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s">'href'</span><span class="p">])</span>
+        
+<span class="k">def</span> <span class="nf">getPlayList</span><span class="p">(</span><span class="n">playListId</span><span class="p">):</span>
+    <span class="n">playListUrl</span> <span class="o">=</span> <span class="n">BASE_URL</span> <span class="o">+</span> <span class="n">playListId</span>
+    <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">_session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">playListUrl</span><span class="p">)</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+    <span class="n">songList</span> <span class="o">=</span> <span class="n">soup</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">'ul'</span><span class="p">,</span><span class="n">attrs</span> <span class="o">=</span> <span class="p">{</span><span class="s">'class'</span><span class="p">:</span><span class="s">'f-hide'</span><span class="p">})</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">songList</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s">'li'</span><span class="p">):</span>
+        <span class="n">startIndex</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">'a'</span><span class="p">))[</span><span class="s">'href'</span><span class="p">]</span>
+        <span class="n">songId</span> <span class="o">=</span> <span class="n">startIndex</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">'='</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">readEver</span><span class="p">(</span><span class="n">songId</span><span class="p">)</span>
+        
+<span class="k">def</span> <span class="nf">getSongInfo</span><span class="p">(</span><span class="n">songId</span><span class="p">):</span>
+    <span class="k">pass</span>
+    
+<span class="k">def</span> <span class="nf">aesEncrypt</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">secKey</span><span class="p">):</span> 
+    <span class="n">pad</span> <span class="o">=</span> <span class="mi">16</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">%</span> <span class="mi">16</span> 
+    <span class="n">text</span> <span class="o">=</span> <span class="n">text</span> <span class="o">+</span> <span class="n">pad</span> <span class="o">*</span> <span class="nb">chr</span><span class="p">(</span><span class="n">pad</span><span class="p">)</span> 
+    <span class="n">encryptor</span> <span class="o">=</span> <span class="n">AES</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">secKey</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s">'0102030405060708'</span><span class="p">)</span> 
+    <span class="n">ciphertext</span> <span class="o">=</span> <span class="n">encryptor</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> 
+    <span class="n">ciphertext</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">ciphertext</span><span class="p">)</span> 
+    <span class="k">return</span> <span class="n">ciphertext</span> 
+<span class="k">def</span> <span class="nf">rsaEncrypt</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">pubKey</span><span class="p">,</span> <span class="n">modulus</span><span class="p">):</span> 
+    <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> 
+    <span class="n">rs</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">'hex'</span><span class="p">),</span> <span class="mi">16</span><span class="p">)</span><span class="o">**</span><span class="nb">int</span><span class="p">(</span><span class="n">pubKey</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span> <span class="o">%</span> <span class="nb">int</span><span class="p">(</span><span class="n">modulus</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span> 
+    <span class="k">return</span> <span class="nb">format</span><span class="p">(</span><span class="n">rs</span><span class="p">,</span> <span class="s">'x'</span><span class="p">)</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">256</span><span class="p">)</span> 
+<span class="k">def</span> <span class="nf">createSecretKey</span><span class="p">(</span><span class="n">size</span><span class="p">):</span> 
+    <span class="k">return</span> <span class="p">(</span><span class="s">''</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">xx</span><span class="p">:</span> <span class="p">(</span><span class="nb">hex</span><span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">xx</span><span class="p">))[</span><span class="mi">2</span><span class="p">:]),</span> <span class="n">os</span><span class="o">.</span><span class="n">urandom</span><span class="p">(</span><span class="n">size</span><span class="p">))))[</span><span class="mi">0</span><span class="p">:</span><span class="mi">16</span><span class="p">]</span> 
+
+<span class="k">def</span> <span class="nf">readEver</span><span class="p">(</span><span class="n">songId</span><span class="p">):</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="s">'http://music.163.com/weapi/v1/resource/comments/R_SO_4_'</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">songId</span><span class="p">)</span><span class="o">+</span><span class="s">'/?csrf_token='</span> 
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span> <span class="s">'Cookie'</span><span class="p">:</span> <span class="s">'appver=1.5.0.75771;'</span><span class="p">,</span> <span class="s">'Referer'</span><span class="p">:</span> <span class="s">'http://music.163.com/'</span> <span class="p">}</span> 
+    <span class="n">text</span> <span class="o">=</span> <span class="p">{</span> <span class="s">'username'</span><span class="p">:</span> <span class="s">''</span><span class="p">,</span> <span class="s">'password'</span><span class="p">:</span> <span class="s">''</span><span class="p">,</span> <span class="s">'rememberLogin'</span><span class="p">:</span> <span class="s">'true'</span> <span class="p">}</span> 
+    <span class="n">modulus</span> <span class="o">=</span> <span class="s">'00e0b509f6259df8642dbc35662901477df22677ec152b5ff68ace615bb7b725152b3ab17a876aea8a5aa76d2e417629ec4ee341f56135fccf695280104e0312ecbda92557c93870114af6c9d05c4f7f0c3685b7a46bee255932575cce10b424d813cfe4875d3e82047b97ddef52741d546b8e289dc6935b3ece0462db0a22b8e7'</span> 
+    <span class="n">nonce</span> <span class="o">=</span> <span class="s">'0CoJUm6Qyw8W8jud'</span> 
+    <span class="n">pubKey</span> <span class="o">=</span> <span class="s">'010001'</span> 
+    <span class="n">text</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> 
+    <span class="n">secKey</span> <span class="o">=</span> <span class="n">createSecretKey</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span> 
+    <span class="n">encText</span> <span class="o">=</span> <span class="n">aesEncrypt</span><span class="p">(</span><span class="n">aesEncrypt</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">nonce</span><span class="p">),</span> <span class="n">secKey</span><span class="p">)</span> 
+    <span class="n">encSecKey</span> <span class="o">=</span> <span class="n">rsaEncrypt</span><span class="p">(</span><span class="n">secKey</span><span class="p">,</span> <span class="n">pubKey</span><span class="p">,</span> <span class="n">modulus</span><span class="p">)</span> 
+    <span class="n">data</span> <span class="o">=</span> <span class="p">{</span> <span class="s">'params'</span><span class="p">:</span> <span class="n">encText</span><span class="p">,</span> <span class="s">'encSecKey'</span><span class="p">:</span> <span class="n">encSecKey</span> <span class="p">}</span> 
+    <span class="n">req</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span> 
+    <span class="n">total</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s">'total'</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">total</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">10000</span><span class="p">:</span>
+        <span class="nb">print</span> <span class="n">songId</span><span class="p">,</span><span class="n">total</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">pass</span>
+    
+        
+<span class="k">if</span> <span class="n">__name__</span><span class="o">==</span><span class="s">'__main__'</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">43</span><span class="p">):</span>
+        <span class="n">getPage</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="o">*</span><span class="mi">35</span><span class="p">))</span>
+</code></pre></div>
